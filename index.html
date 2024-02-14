@@ -27,8 +27,8 @@
                 <ul class="navbar-nav">
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#about">About</a></li>
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB1 Artemis">LAB1 Artemis</a></li>
-                    <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#education">LAB2</a></li>
-                    <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#skills">LAB3</a></li>
+                    <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB2 IMU">LAB2 IMU</a></li>
+                    <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB3">LAB3</a></li>
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#interests">LAB4</a></li>
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#awards">LAB5</a></li>
                 </ul>
@@ -330,36 +330,194 @@
             <hr class="m-0" />
 
 
-
-
-
-
-
-
-
-
-
-
-            <!-- Education-->
-            <section class="resume-section" id="education">
+            <!-- LAB2-->
+            <section class="resume-section" id="LAB2 IMU">
                 <div class="resume-section-content">
-                    <h2 class="mb-5">Education</h2>
+                    <h2 class="mb-5">LAB2 IMU</h2>
                     <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
                         <div class="flex-grow-1">
-                            <h3 class="mb-0">University of Colorado Boulder</h3>
-                            <div class="subheading mb-3">Bachelor of Science</div>
-                            <div>Computer Science - Web Development Track</div>
-                            <p>GPA: 3.23</p>
+                            <h3 class="mb-0">Objectives</h3>
+                            <p>
+                                This lab integrated an  Inertial Measurement Unit (IMU) onto the Artemis board to sense the robot's orientation and acceleration. Two methods for measuring orientation, using a gyroscope and accelerometer, were introduced and their advantages and drawbacks analyzed. Finally, the IMU was mounted on the RC robot for testing.
+                            </p>
                         </div>
-                        <div class="flex-shrink-0"><span class="text-primary">August 2006 - May 2010</span></div>
+                        <div class="flex-shrink-0"><span class="text-primary">Feb 2024</span></div>
                     </div>
+
                     <div class="d-flex flex-column flex-md-row justify-content-between">
                         <div class="flex-grow-1">
-                            <h3 class="mb-0">James Buchanan High School</h3>
-                            <div class="subheading mb-3">Technology Magnet Program</div>
-                            <p>GPA: 3.56</p>
+                            <h3 class="mb-0">IMU Setup</h3>
+                            <div class="subheading mb-3">IMU Connection</div>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab2IMU.jpg" alt="..." />
+                            </div>
+
+                            <div class="subheading mb-3">IMU Readings</div>
+                            <p>
+                                After connecting the IMU to the Artemis board, we tested the connection by running the example provided by the library to read sensor readings as shown below.
+                            </p>
+                            <div style="text-align: center;">
+                                <iframe src="https://drive.google.com/file/d/1o8ayQW6IfAbYgrF8Gtw5vV9kEoR_CEoV/preview" width="640" height="480" allow="autoplay"></iframe>
+                            </div>
+
+                            <div class="subheading mb-3">AD0_VAL</div>
+                            <p>
+                                "AD0_VAL" represents the value of the last bit of the I2C address used to communicate with the ICM-20948 IMU sensor.
+                            </p>
+
+                            <div class="subheading mb-3">Acceleration and Gyroscope Data Discussion</div>
+                            <p>
+                                When contrasting the accelerometer and gyroscope data, it is observed that when the IMU is positioned on a level surface, the accelerometer demonstrates fluctuations within the range of &plusmn 15 ms/s&sup2, while the gyroscope fluctuates between &plusmn 1 degree per second.
+                            </p>
                         </div>
-                        <div class="flex-shrink-0"><span class="text-primary">August 2002 - May 2006</span></div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">ACCELEROMETER</h3>
+                            <p>
+                                The accelerometer integrated within the Inertial Measurement Unit (IMU) captures acceleration data in millimeters per second squared (mm/s²). Pitch and roll angles can be derived from the acceleration components along the x, y, and z axes, denoted as ax, ay, and az respectively, as depicted in Eq1. During the implementation of the function, the atan2 function is employed to determine the quadrant.
+                            </p>
+                            <div style="text-align: center;">
+                                <p>	Theta = arctan(<span style="white-space: nowrap;"><span style="vertical-align: super;">ax</span> / <span style="vertical-align: sub;">az</span></span>)</p>
+                                <p>	Phi = arctan(<span style="white-space: nowrap;"><span style="vertical-align: super;">ay</span> / <span style="vertical-align: sub;">az</span></span>)</p>                               
+                            </div>
+                            <p>
+                                Utilizing the aforementioned equations, the pitch and roll measurements obtained at {90,-90} are depicted below. Observing the graphical representation, it becomes evident that when the pitch is set to 90 degrees, the roll measurement exhibits greater fluctuation compared to the scenario where the IMU is positioned horizontally. Additionally, an observation is made that at a pitch of 90 degrees and a roll of -90 degrees, the fluctuation in roll surpasses that of pitch.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/LAB2acc.jpg" alt="..." />
+                            </div>
+                            <p>
+                                The Fourier transformation of pitch and roll is shown below. The signal for roll is noisier than that of pitch. To limit the noise, we can use a low pass filter. A mean filter can help to reduce the noise and is implemented.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/LAB2accftRAW.jpg" alt="..." />
+                            </div>
+                            <p>
+                                The filtered signal is shown below.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/LAB2FT.jpg" alt="..." />
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">gyroscope</h3>
+                            <p>
+                                To mitigate the noise present in the pitch and roll calculations derived from accelerometer data and to capture yaw, it was imperative to incorporate gyroscope readings. Analysis of the accompanying graphs reveals a gradual drift in the gyroscope data over time, attributed to the integration of raw data. Despite the gyroscope being less noisy than the accelerometer, integration poses a significant risk of introducing substantial errors in robotic applications. Consequently, a synergistic approach involving the fusion of gyroscope and accelerometer data was pursued to establish a sensor system characterized by enhanced accuracy and reduced noise levels.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/LAB2GYR1.jpg" alt="..." />
+                            </div>
+                            <p>
+                                The following code implemented a complimentary filter.
+                            </p>
+                            <pre>
+                                <code>
+                                    // complimentary filter
+                                    pitchAcc2 = atan2(sensor->accX(),sensor->accZ())*57.2958*1.02;
+                                    rollAcc2 = atan2(sensor->accY(),sensor->accZ())*57.2958*1.02;
+                                    pitchGyr2 = pitchAcc2*(CompFilterAlpha) + (pitchGyr2 + (sensor->gyrY())*gryStep*0.001)*(1-CompFilterAlpha);
+                                    rollGyr2 = rollAcc2*(CompFilterAlpha) + (rollGyr2 + (sensor->gyrX())*gryStep*0.001)*(1-CompFilterAlpha);
+                                    yawGyr2 = yawGyr2*(CompFilterAlpha) + (yawGyr2 + (sensor->gyrZ())*gryStep*0.001)*(1-CompFilterAlpha);
+                                </code>
+                            </pre>
+                            <p>
+                                The filter signal is shown below.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/LAB3GYRFILTER.jpg" alt="..." />
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">SAMPLE DATA</h3>
+                            <p>
+                                Delays introduced for debugging purposes were eliminated to assess the sampling rate of the Inertial Measurement Unit (IMU). Time stamps, accelerometer data, and gyroscope data were stored in memory for subsequent transmission after data collection. The average sampling interval was determined to be 3 milliseconds. Data was organized into separate float arrays and subsequently transmitted to the computer as a concatenated array. The Arduino code implementing this functionality is provided below.   
+                            </p>
+                            <pre>
+                                <code>
+                                    case getData:
+                                        for (int x=0; x<1500; x++){
+                                            if (myICM.dataReady()){
+                                            myICM.getAGMT();
+                                            printScaledAGMT(&myICM); 
+                                            }
+                                            else{
+                                            SERIAL_PORT.println("Waiting for data");
+                                            delay(500);
+                                            }
+                                        }  
+                                        break;
+                                    case sendData:
+                                    for (int y=0; y<1500; y++){
+                                        tx_estring_value.clear();
+                                        tx_estring_value.append("|accpitch|");
+                                        tx_estring_value.append(accpitch[y]);
+                                        tx_estring_value.append("|accroll|");
+                                        tx_estring_value.append(accroll[y]);
+                                        tx_estring_value.append("|gyrpitch|");
+                                        tx_estring_value.append(gyrpitch[y]);
+                                        tx_estring_value.append("|gyrroll|");
+                                        tx_estring_value.append(gyrroll[y]);
+                                        tx_estring_value.append("|gyryaw|");
+                                        tx_estring_value.append(gyryaw[y]);
+                                        tx_estring_value.append("|time|");
+                                        tx_estring_value.append(timeData[y]);           
+                                        tx_characteristic_string.writeValue(tx_estring_value.c_str());
+                                    }
+                                    break;
+                                    // in printScaledAGMT, add the following
+                                    if (myICM.dataReady()){
+                                        if (index1 < 1500){
+                                          accpitch[index1] = pitch;
+                                          accroll[index1] = roll;
+                                          gyrpitch[index1] = pitchGyr;
+                                          gyrroll[index1] = rollGyr;
+                                          gyryaw[index1] = yawGyr;
+                                          timeData[index1] = (float)millis();
+                                          index1 ++;
+                                        }
+                                      }
+                                </code>
+                            </pre>
+                            <p>
+                                The result is shown below. In the test, data is collected for approximately 6s.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/LAB2sampledata.jpg" alt="..." />
+                            </div>
+                            <p>
+                                In this exercise, opting to store data as arrays of floats emerges as an efficient solution. This choice strikes a balance between precision, allowing for accurate representation of fractional values, and efficiency in storing multiple readings within a single data structure. While integers consume less memory, they sacrifice precision, potentially compromising the fidelity of the data. On the other hand, arrays of characters, though versatile, are not as storage-efficient as floats, making them less favorable for this task.
+                            </p>
+                        </div>
+                    </div>
+
+
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">RECORD A STUNT</h3>
+                            <p>
+                                The following video demonstrates the robot being teleport by the controller.
+                            </p>
+                            <div style="text-align: center;">
+                                <iframe src="https://drive.google.com/file/d/1XxEOaONcXwlwuIHLWB1zM5HFeXMHh9CN/preview" width="640" height="480" allow="autoplay"></iframe>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    
+                        
+                       
                     </div>
                 </div>
             </section>
