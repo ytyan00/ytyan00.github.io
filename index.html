@@ -28,7 +28,7 @@
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#about">About</a></li>
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB1 Artemis">LAB1 Artemis</a></li>
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB2 IMU">LAB2 IMU</a></li>
-                    <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB3">LAB3</a></li>
+                    <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB3 ToF Sensors">LAB3 ToF Sensors</a></li>
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#interests">LAB4</a></li>
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#awards">LAB5</a></li>
                 </ul>
@@ -522,10 +522,194 @@
                 </div>
             </section>
             <hr class="m-0" />
-            <!-- Skills-->
-            <section class="resume-section" id="skills">
+            <!-- LAB3 Time of Flight Sensors-->
+            <section class="resume-section" id="LAB3 ToF Sensors">
                 <div class="resume-section-content">
-                    <h2 class="mb-5">Skills</h2>
+                    <h2 class="mb-5">LAB3 Time of Flight Sensors</h2>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">Objectives</h3>
+                            <p>
+                                The objective of this laboratory exercise is to enhance the functionality of the robot by integrating Time of Flight (ToF) sensors. These sensors provide the robot with the capability to measure its distance from objects in its surrounding environment.
+                            </p>
+                        </div>
+                        <div class="flex-shrink-0"><span class="text-primary">Feb 2024</span></div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">Pre-LAB</h3>
+                            <p>
+                                According to the  VL53L1X datasheet, the default address is 0x52. By executing the "Wire_I2C" example, the address of the ToF sensor is 0x29.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab3Addr.jpg" alt="..." />
+                            </div>
+                            <p>
+                                In our proposal, we present two prospective configurations for sensor placement. The first configuration involves the installation of sensors both at the front and rear ends of the robot. This arrangement facilitates environmental perception by necessitating only a 90-degree turn, as opposed to other configurations that mandate a 180-degree rotation for comprehensive environmental sensing. However, it is noteworthy that in scenarios involving robot teleportation, this setup renders the robot incapable of detecting obstacles situated on its sides. The second configuration entails positioning one sensor at the front of the robot and another on its lateral side. This arrangement augments the robot's capability to sense its surroundings, particularly enabling it to detect objects situated to its side.
+                            </p>
+                            <p>
+                                A sketch of wiring diagram is shown below.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/LAB3schema.jpg" alt="..." />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">ToF Connection</h3>
+                            <p>
+                                The following image shows an example of connecting a ToF sensor to the Artemis board. The test results is shown in picture above, and the address is 0x29.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab3wiring1.jpg" alt="..." />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">ToF Sensor Modes</h3>
+                            <p>
+                                The ToF sensor offers three distinct operational modes: short, medium, and long. The short-distance mode is characterized by heightened precision and represents a viable candidate for establishing a baseline mechanism for promptly halting the robot in emergent scenarios to prevent collisions with obstacles. Given the absence of additional long-distance sensors onboard, the long-distance mode is the preferred choice. Despite the presence of increased sensor noise in this mode, it boasts a detection range spanning 4 meters. This extended range ensures that the swiftly moving robot can promptly discern potential obstacles and react on time. The efficacy of the long-distance mode was evaluated with the results documented below.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab3TOF_test.jpg" alt="..." />
+                            </div>
+                        </div>
+                    </div>
+
+
+
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">Multi-ToF Sensors</h3>
+                            <p>
+                                In this section, we address the challenge posed by connecting two Time-of-Flight (ToF) sensors to the Artemis board. Due to the default configuration where both sensors share the same address, a conflict arises, impeding the functionality of one sensor by blocking the communication channel of the other. To circumvent this issue, we employ a solution wherein we temporarily deactivate one sensor by connecting its "XSHUT" pin to pin A8 on the Artemis board. Subsequently, we utilize the provided code to adjust the address of the remaining sensor, thereby resolving the address conflict and ensuring the proper operation of both sensors simultaneously.
+                            </p>
+                            <pre>
+                                <code>
+                                    //Add this in global scale
+                                    //Optional interrupt and shutdown pins.
+                                    #define SHUTDOWN_PIN_1 8
+                                    #define INTERRUPT_PIN_1 3
+                                    #define SHUTDOWN_PIN_2 6
+                                    #define INTERRUPT_PIN_2 4
+                                    //SFEVL53L1X distanceSensor1;
+                                    //Uncomment the following line to use the optional shutdown and interrupt pins.
+                                    SFEVL53L1X distanceSensor1(Wire, SHUTDOWN_PIN_1, INTERRUPT_PIN_1);
+                                    SFEVL53L1X distanceSensor2(Wire, SHUTDOWN_PIN_2, INTERRUPT_PIN_2);
+
+                                    //Add this to setup()
+                                    //Shut down sensor 2
+                                    distanceSensor1.sensorOff();
+                                    //Change address of sensor 1 from default to NEW_ADDRESS
+                                    distanceSensor2.setI2CAddress(0x32);
+                                    Serial.print("Sensor 2 address changed to 0x");
+                                    Serial.println(distanceSensor2.getI2CAddress(), HEX);
+                                    distanceSensor1.sensorOn();
+                                </code>
+                            </pre>
+                            <p>
+                                Now we can read from both sensors as shown below.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab3TwoSensorsReading.jpg" alt="..." />
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">Tof sensor speed</h3>
+                            <p>
+                                The Time-of-Flight sensors exhibit a slower data acquisition speed compared to the looping speed of the Artemis board. Evaluation of clock timing and sensor data availability indicates an average acquisition time of 90 milliseconds, contrasting with the Artemis board's 2-millisecond iteration capability. This discrepancy stems from factors such as the sensors' start-stop ranging process for each iteration and their operation in long-range mode.
+                            </p>
+                            <pre>
+                                <code>
+                                    distanceSensor2.startRanging(); //Write configuration bytes to initiate measurement
+                                    while (!distanceSensor2.checkForDataReady())
+                                    {
+                                      Serial.println(millis());
+                                    }
+                                    int distance = distanceSensor2.getDistance(); //Get the result of the measurement from the sensor
+                                    distanceSensor2.clearInterrupt();
+                                    distanceSensor2.stopRanging();
+                                    // same for the other sensor
+                                </code>
+                            </pre>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/LAB3SensorSpeed.jpg" alt="..." />
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">Bluetooth transmission</h3>
+                            <p>
+                                Using similar methods in Lab 2, the distance from both sensors was sent to the computer via Bluetooth.  The notification handle is shown below.
+                            </p>
+                            <pre>
+                                <code>
+                                    def notificationHandler(uuidStr, bytesArray):
+                                        global tofData1,timeData,tofData2
+                                        decoded_data = bytesArray.decode('utf-8')
+                                        split_data = decoded_data.split("|")
+                                        tofData1.append(split_data[4])
+                                        timeData.append(split_data[2])
+                                        tofData2.append(split_data[5])
+                                        return
+                                    timeData = []
+                                    tofData1 = []
+                                    tofData2 = []
+                                    ble.start_notify(ble.uuid['RX_STRING'], notificationHandler)
+                                    ble.send_command(CMD.getData,"")
+                                    time.sleep(5)
+                                    ble.send_command(CMD.sendData,"")
+                                    time.sleep(10)
+                                    ble.stop_notify(ble.uuid['RX_STRING'])
+                                </code>
+                            </pre>
+                            <p>
+                                The sample data for both sensors is shown below, and the x-axis is time in ms. 
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/LAB3ble_twosensor.jpg" alt="..." />
+                            </div>
+                        </div>
+                    </div>
+
+ 
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">Discussion on infrared transmission based sensors</h3>
+                            <p>
+                                There are three common types of IR sensors, including amplitude-based, triangulation-based, and time-of-flight (ToF) IR sensors. Amplitude-based sensors measure the intensity of IR radiation reflected or emitted by objects and provide solutions for proximity sensing with fast response times but are limited in range and accuracy. Triangulation-based sensors calculate the distance to an object by measuring the angle of reflected IR light and offer higher accuracy and longer ranges compared to amplitude-based sensors. Time-of-flight sensors measure the time taken for IR light to travel to the object and back to determine distance and are more accurate in measuring longer distances.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">Sensitivity of sensors to environments</h3>
+                            <p>
+                                Since the time of flight sensor measures the time of the signal before it returns. It is mostly insensitive to colors, textures, and ambient light compared to other IR sensors mentioned above. However, high levels of ambient light might interfere with the sensors' ability to detect, light-colored surfaces may reflect more light, and highly irregular textures may affect detection.
+                            </p>
+                        </div>
+                    </div>
+
+
+
+
+
                     <div class="subheading mb-3">Programming Languages & Tools</div>
                     <ul class="list-inline dev-icons">
                         <li class="list-inline-item"><i class="fab fa-html5"></i></li>
