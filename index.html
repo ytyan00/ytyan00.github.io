@@ -29,7 +29,7 @@
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB1 Artemis">LAB1 Artemis</a></li>
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB2 IMU">LAB2 IMU</a></li>
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB3 ToF Sensors">LAB3 ToF Sensors</a></li>
-                    <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#interests">LAB4</a></li>
+                    <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB4">LAB4 Motors & OL Control</a></li>
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#awards">LAB5</a></li>
                 </ul>
             </div>
@@ -514,13 +514,10 @@
 
                         </div>
                     </div>
-
-                    
-                        
-                       
                     </div>
                 </div>
             </section>
+           
             <hr class="m-0" />
             <!-- LAB3 Time of Flight Sensors-->
             <section class="resume-section" id="LAB3 ToF Sensors">
@@ -706,46 +703,198 @@
                         </div>
                     </div>
 
-
-
-
-
-                    <div class="subheading mb-3">Programming Languages & Tools</div>
-                    <ul class="list-inline dev-icons">
-                        <li class="list-inline-item"><i class="fab fa-html5"></i></li>
-                        <li class="list-inline-item"><i class="fab fa-css3-alt"></i></li>
-                        <li class="list-inline-item"><i class="fab fa-js-square"></i></li>
-                        <li class="list-inline-item"><i class="fab fa-angular"></i></li>
-                        <li class="list-inline-item"><i class="fab fa-react"></i></li>
-                        <li class="list-inline-item"><i class="fab fa-node-js"></i></li>
-                        <li class="list-inline-item"><i class="fab fa-sass"></i></li>
-                        <li class="list-inline-item"><i class="fab fa-less"></i></li>
-                        <li class="list-inline-item"><i class="fab fa-wordpress"></i></li>
-                        <li class="list-inline-item"><i class="fab fa-gulp"></i></li>
-                        <li class="list-inline-item"><i class="fab fa-grunt"></i></li>
-                        <li class="list-inline-item"><i class="fab fa-npm"></i></li>
-                    </ul>
-                    <div class="subheading mb-3">Workflow</div>
-                    <ul class="fa-ul mb-0">
-                        <li>
-                            <span class="fa-li"><i class="fas fa-check"></i></span>
-                            Mobile-First, Responsive Design
-                        </li>
-                        <li>
-                            <span class="fa-li"><i class="fas fa-check"></i></span>
-                            Cross Browser Testing & Debugging
-                        </li>
-                        <li>
-                            <span class="fa-li"><i class="fas fa-check"></i></span>
-                            Cross Functional Teams
-                        </li>
-                        <li>
-                            <span class="fa-li"><i class="fas fa-check"></i></span>
-                            Agile Development & Scrum
-                        </li>
-                    </ul>
                 </div>
             </section>
+
+
+
+
+
+            <hr class="m-0" />
+            <!-- LAB4 Motors and Open Loop Control-->
+            <section class="resume-section" id="LAB4">
+                <div class="resume-section-content">
+                    <h2 class="mb-5">LAB4 Motors and Open Loop Control</h2>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">senor implementation on the robot</h3>
+                            <p>
+                                Given the dual motor setup, two motor drivers are used. The Artemis can only supply up to 3V voltage and is not capable of powering the motor at 3.7V. The motor drivers took two PWMs as input and connected to an external battery. A schematic of implementing the sensors on the robot is shown below.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab4car.jpg" alt="..." />
+                            </div>
+                            <p>
+                                The following graph shows the connection between motors, motor drivers, Artemis, and the battery. One motor is connected to pins 7 and 9 and the other to pins 11 and 12. These pins are chosen due to their PWM capabilities.s
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab4schema.jpg" alt="..." />
+                            </div>
+                        </div>
+                        <div class="flex-shrink-0"><span class="text-primary">Feb 2024</span></div>
+                    </div>
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">battery</h3>
+                            <p> 
+                                The laboratory kit includes two batteries: one with a capacity of 650mAh and another with 850mAh. To mitigate interference between the motors and the Artemis microcontroller, separate batteries will be dedicated to each component. Given the higher power consumption of the motors compared to the Artemis, the 850mAh battery will be allocated to power the motors, while the 650mAh battery will be utilized to supply power to the Artemis microcontroller.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">TESTING THE DUAL MOTOR DRIVER</h3>
+                            <p>
+                                The dual motor driver was tested using a 3.7V power supply in lieu of the motor, with input and output signals measured using an oscilloscope. See the connection below.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab3Addr.jpg" alt="..." />
+                            </div>
+                            <p>
+                                The power supply was set to the same voltage output as the 850mAh battery, 3.7V, to simulate the voltage readings. The code used to drive the motors is shown below.
+                            </p>
+                            <pre>
+                                <code>
+                                    void setup() {
+                                        Serial.begin(115200);
+                                        analogWrite(7, 0);
+                                        analogWrite(9, 0);
+                                        analogWrite(12, 0);
+                                        analogWrite(11, 0);
+                                      }
+                                      
+                                      void loop() {
+                                        Serial.println("Start");
+                                        analogWrite(11, 0);
+                                        analogWrite(12, 100);//right
+                                        //analogWrite(9, 0);
+                                        //analogWrite(7, 255);
+                                        delay(4000);
+                                        
+                                        analogWrite(11, 0);
+                                        analogWrite(12, 0);
+                                        analogWrite(9, 0);
+                                        analogWrite(7, 0);
+                                        delay(4000);
+                                        
+                                        analogWrite(11, 100);
+                                        analogWrite(12, 0);
+                                        delay(4000);
+                                      }
+                                      
+                                </code>
+                            </pre>
+                            <p>
+                                The reading of the oscilloscope is shown below.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/LAB3schema.jpg" alt="..." />
+                            </div>
+                            <p>
+                                The following video was taken to demonstrate control of the motors. The wheels were programmed to spin in either direction for 4s each.
+                            </p>
+                            <div style="text-align: center;">
+                                <iframe src="https://drive.google.com/file/d/11_Fm9tWEjc0WoRE1HL4oMhbGsvTH8oUJ/preview" width="640" height="480" allow="autoplay"></iframe>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">both wheels spinning</h3>
+                            <p>
+                                The following video shows an example of both wheels on the two sides spinning on batteries.
+                            </p>
+                            <div style="text-align: center;">
+                                <iframe src="https://drive.google.com/file/d/1XGj900W0vWt5S1VjRNpyLZ-qT45iSxxt/preview" width="640" height="480" allow="autoplay"></iframe>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">Lower limit PWM value</h3>
+                            <p>
+                                The motors were assessed to determine their operational range, focusing initially on the lower threshold. By iteratively adjusting the PWM value until motion initiation was observed from a standstill position, the lower limit of the robotic system's locomotion was identified. Notably, experimentation revealed this threshold to be contingent upon the surface characteristics. Specifically, on a flat and polished wooden surface, the respective lower limit values for the left and right wheels were determined to be 90 and 85. Conversely, when evaluated on a PVC floor, these values were observed to be 105 and 95 for the left and right wheels, respectively.
+                            </p>
+                        </div>
+                    </div>
+
+
+
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">Calibration and Open Loop Control</h3>
+                            <p>
+                                From the section above, it is clear that the two motors have different thresholds. Therefore, calibration is needed to drive the car in a straight line. The calibration process was done by adjusting the analog output value and observing the car driving on the ground. The empirical calibration is to have the left motor's output greater than that of the right by 10 to 15 in absolute value.
+                            </p>
+                            <pre>
+                                <code>
+                                    // right
+                                    analogWrite(11, 0);
+                                    analogWrite(12, 100);
+                                    // left
+                                    analogWrite(9, 0);
+                                    analogWrite(7, 115);
+                                </code>
+                            </pre>
+                            <p>
+                                The open loop control video is shown below. The distance traveled in the lab is about 2.5m, and the car is driving in approximately a straight line.
+                            </p>
+                            <div style="text-align: center;">
+                                <iframe src="https://drive.google.com/file/d/1aDbZnU6MkkImQqf-dklYGwjVCh3KxB39/preview" width="640" height="480" allow="autoplay"></iframe>
+                            </div>
+                            <p>
+                                The video below shows the car drive in straight line and make a turn.
+                            </p>
+                            <div style="text-align: center;">
+                                <iframe src="https://drive.google.com/file/d/16YU0Yqziljqg4P2FgsAPlplc9b4wW9cR/preview" width="640" height="480" allow="autoplay"></iframe>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">ANALOGWRITE SPEED AND LOWER LIMIT VALUE</h3>
+                            <p>
+                                The Time-of-Flight sensors exhibit a slower data acquisition speed compared to the looping speed of the Artemis board. Evaluation of clock timing and sensor data availability indicates an average acquisition time of 90 milliseconds, contrasting with the Artemis board's 2-millisecond iteration capability. This discrepancy stems from factors such as the sensors' start-stop ranging process for each iteration and their operation in long-range mode.
+                            </p>
+                            <p>
+                                The lowest PWM value while the robot was in motion was tested to be 25 for both motors. This was done by initially running the robot at its lower limit value, and then decreasing the PWM value until the robot stopped moving.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/LAB3SensorSpeed.jpg" alt="..." />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
             <hr class="m-0" />
             <!-- Interests-->
             <section class="resume-section" id="interests">
