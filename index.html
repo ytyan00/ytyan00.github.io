@@ -750,7 +750,7 @@
                                 The dual motor driver was tested using a 3.7V power supply in lieu of the motor, with input and output signals measured using an oscilloscope. See the connection below.
                             </p>
                             <div style="text-align: center;">
-                                <img class="img-fluid" src="assets/img/lab3Addr.jpg" alt="..." />
+                                <img class="img-fluid" src="assets/img/lab4_external_battery.jpg" alt="..." />
                             </div>
                             <p>
                                 The power supply was set to the same voltage output as the 850mAh battery, 3.7V, to simulate the voltage readings. The code used to drive the motors is shown below.
@@ -790,7 +790,7 @@
                                 The reading of the oscilloscope is shown below.
                             </p>
                             <div style="text-align: center;">
-                                <img class="img-fluid" src="assets/img/LAB3schema.jpg" alt="..." />
+                                <img class="img-fluid" src="assets/img/lab4osci.jpg" alt="..." />
                             </div>
                             <p>
                                 The following video was taken to demonstrate control of the motors. The wheels were programmed to spin in either direction for 4s each.
@@ -862,13 +862,16 @@
                         <div class="flex-grow-1">
                             <h3 class="mb-0">ANALOGWRITE SPEED AND LOWER LIMIT VALUE</h3>
                             <p>
-                                The Time-of-Flight sensors exhibit a slower data acquisition speed compared to the looping speed of the Artemis board. Evaluation of clock timing and sensor data availability indicates an average acquisition time of 90 milliseconds, contrasting with the Artemis board's 2-millisecond iteration capability. This discrepancy stems from factors such as the sensors' start-stop ranging process for each iteration and their operation in long-range mode.
-                            </p>
-                            <p>
-                                The lowest PWM value while the robot was in motion was tested to be 25 for both motors. This was done by initially running the robot at its lower limit value, and then decreasing the PWM value until the robot stopped moving.
+                                The analogWrite function on the Artemis operates with a time step of 3ms, resulting in a frequency of approximately 333Hz, sufficiently rapid for our robotic application, facilitating swift changes in direction. Manual configuration of timers could enhance PWM signal stability, particularly as the current time step exhibits fluctuations. Faster readings enable the robot to better sustain the directed PWM signal.
                             </p>
                             <div style="text-align: center;">
-                                <img class="img-fluid" src="assets/img/LAB3SensorSpeed.jpg" alt="..." />
+                                <img class="img-fluid" src="assets/img/lab4analogTime.jpg" alt="..." />
+                            </div>
+                            <p>
+                                The lowest PWM value while the robot was in motion was tested to be 30 for the right motor and 42 for the left motor.
+                            </p>
+                            <div style="text-align: center;">
+                                <iframe src="https://drive.google.com/file/d/1TDe-ADC-UoEJotvzAIu7I_lCveVtr2B_/preview" width="640" height="480" allow="autoplay"></iframe>
                             </div>
                         </div>
                     </div>
