@@ -31,6 +31,8 @@
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB3 ToF Sensors">LAB3 ToF Sensors</a></li>
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB4">LAB4 Motors & OL Control</a></li>
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB5">LAB5 PID Control</a></li>
+                    <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB6">LAB6 Orientation Control</a></li>
+
                 </ul>
             </div>
         </nav>
@@ -1074,7 +1076,158 @@
 
 
 
+            <hr class="m-0" />
+            <!-- LAB6 Orientation Control-->
+            <section class="resume-section" id="LAB6">
+                <div class="resume-section-content">
+                    <h2 class="mb-5">LAB6 Orientation Control</h2>
 
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">Pre-LAB</h3>
+                            <p>
+                                To measure the car's basic parameters while operating untethered. Bluetooth connection is established between the computer and the Artemis. However, from prior laboratory experiments, it has been observed that Bluetooth-based data transmission exhibits latency. Sending real-time data through Bluetooth slows down the control loop and sensing rate inevitably. To address this, the timestamp, gyroscope data, and motor driver output data will be stored within the memory of the Artemis microcontroller. After the car achieves the task, the "sendData" command will be sent from the computer to retrieve stored data from the Artemis. The code structure is depicted below.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab6codeStruct.jpg" alt="..." />
+                            </div>
+                            <p>
+                                On the python side, a notificationHandler is created as outlined below.
+                            </p>
+                            <pre>
+                                <code>
+                                def notificationHandler(uuidStr, bytesArray):
+                                    global tofData1,timeData,tofData2,velocity
+                                    decoded_data = bytesArray.decode('utf-8')
+                                    split_data = decoded_data.split("|")
+                                    timeData.append(split_data[2])
+                                    gyrData.append(split_data[4])
+                                    velocity.append(split_data[6])
+                                    return
+                                velocity = []
+                                timeData = []
+                                gyrData = []
+                                ble.start_notify(ble.uuid['RX_STRING'], notificationHandler)
+                                ble.send_command(CMD.setPID,"0.02|0.00002|0.002")
+                                ble.send_command(CMD.getData,"1")
+                                </code>
+                            </pre>
+                        </div>
+                        <div class="flex-shrink-0"><span class="text-primary">March 2024</span></div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">controller</h3>
+                            <div class="subheading mb-3">PID discussion</div>
+                            <p> 
+                                PID control is employed for precise and stable control, essential for accurately guiding and stopping vehicles at predefined orientations. The proportional component responds to deviations from the intended orientation. Meanwhile, the integral component, accumulating errors over time, rectifies persistent deviations from the setpoint, enhancing precision. Additionally, the derivative component anticipates changes in the system, thereby mitigating oscillations caused by integral action and bolstering overall system stability. The empirically determined gains, set at Kp=2, Ki=0.02, and Kd=0.05, result from iterative adjustments following individual testing of each parameter and subsequent synthesis to optimize control performance. Increasing the proportional gain (Kp) reduces the rise time and the steady state error, yet it cannot close the error completely. Elevating the integral gain (Ki) reduces steady-state error but can prolong the settling time and provoke overshoot if excessively amplified. Likewise, elevating the derivative gain (Kd) tends to attenuate overshoot and oscillations but can amplify noise sensitivity and destabilize the system if set too high.
+                            </p>
+                            <div class="subheading mb-3">PID Input Signal</div>
+                            <p>
+                                The gyroscope data is integrated over time to obtain the yaw of the car as shown below.
+                            </p>
+                            <pre>
+                                <code>
+                                    if (initGyr){
+                                        yawGyr = (sensor->gyrZ())*dtIMU*0.001;
+                                        desiredAngle = yawGyr;
+                                        initGyr = false;
+                                    }
+                                    else{
+                                        yawGyr += (sensor->gyrZ())*dtIMU*0.001;
+                                    }
+                                </code>
+                            </pre>
+                            <p>
+                                This integration method might lead to the yaw measurement drifting over time since the integrator is cumulating errors. To mitigate this problem, we could introduce a low pass filter, such as a mean filter, before integration. However, in this lab, I observed that the drift is relatively small as the car is operating in a short period. Additionally, if we are calculating the pitch and roll, we should introduce a complimentary filter. However, when calculating yaw, this method is not feasible since there is no way to find yaw from the accelerometer.
+                            </p>
+                            <p>
+                                Gyroscopes exhibit biases, manifesting as constant offsets in their output, even in the absence of rotation. To mitigate this, an initial gyroscope reading is recorded upon startup. Subsequently, this recorded bias is subtracted from all subsequent readings to enhance accuracy.
+                            </p>
+                            <p>
+                                As per the IMU datasheet, a maximum rotational output limit of 250 degrees per second (dps) is specified. Consequently, rapid turns exceeding this threshold may result in inaccurate yaw measurements. This is mostly enough for this lab. On the other hand, to circumvent this limitation, adjusting the cap to 500 dps could mitigate such inaccuracies.
+                            </p>
+                            <div class="subheading mb-3">Derivative Control</div>
+                            <p>
+                                To compute the derivative of the control output concerning yaw measurement, it is imperative to differentiate the yaw signal, obtained through the integration of gyroscope readings. This process may entail amplification of high-frequency noise inherent in the signal, potentially exacerbating gyroscope noise. Nonetheless, derivative computation is straightforward to execute, and I have not encountered notable discrepancies as a consequence. Should such issues arise, the adoption of a low-pass filter to mitigate high-frequency noise stemming from the derivative term would be advisable.
+                            </p>
+                            
+
+
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">Range/Sampling time</h3>
+                            <p> 
+                                When running the gyroscope, the timestamp for which data is being updated is recorded and shown below. The average sampling rate is 50 samples per second. Though we desired a high sample rate, this is enough for the orientation task.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab6samplerate.jpg" alt="..." />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">Orientation Control</h3>
+                            <p>
+                                This task encompasses two phases. The user can optionally transmit a command to set the vehicle's orientation with the specified goal, and the car will move to the designated orientation. Subsequently, the vehicle readjusts its orientation to realign with the goal following any disturbances encountered. If no goal is set by the user, the initial angle is the goal.
+                            </p>
+                            <div style="text-align: center;">
+                                <iframe src="https://drive.google.com/file/d/1-cIOI93k_8NCFPjalUaO4r98yDvbxEfW/preview" width="640" height="480" allow="autoplay"></iframe>
+                            </div>
+                            <p>
+                                In pursuit of this objective, various combinations of PID gains were experimentally evaluated. The initial trial employed the PID values utilized in the preceding laboratory session, namely kp=0.2, ki=0.0002, and kd=0.02. Subsequent analysis presents the evolution of the car's angle and the corresponding Pulse Width Modulation (PWM) output over time.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab6yaw_trail1.jpg" alt="..." />
+                                <img class="img-fluid" src="assets/img/lab6velocity_trail1.jpg" alt="..." />
+                            </div>
+                            <p>
+                                From the graph above, the PWM signal is too weak to drive the wheels and the car does not move. Therefore, I increased the gains such that kp=1, ki=0.02, and kd=0.2. The angle and PWM signal over time is shown below. 
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab6_yaw_trail2.jpg" alt="..." />
+                                <img class="img-fluid" src="assets/img/lab6_velocity_trail2.jpg" alt="..." />
+                            </div>
+                            <p>
+                                From the orientation graph, when the perturbation is small, the car is capable of returning to the desired angle with some steady state error. However, when the perturbation is big (at 60000ms), the PID controller is oscillatory. At this point, not only the settling time is long, but there is also a steady state error. Therefore, proportional gain and derivative gain need to be bigger to enhance settling time and the steady state error. The final controller yields the follwoing figures, where 30 degrees is the designated angle.
+                            </p>
+                            <img class="img-fluid" src="assets/img/lab6orientationYaw.jpg" alt="..." />
+                            <img class="img-fluid" src="assets/img/lab6velocity.jpg" alt="..." />
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">Wind-up implementation</h3>
+                            <p>
+                                The following code shows the wind-up implementation.
+                            </p>
+                            <pre>
+                                <code>
+                                    // I control
+                                    integraterError += (errorCurrent*dt/10);
+                                    if (integraterError > 8000){
+                                      integraterError = 8000;
+                                    }
+                                    else if (integraterError < -8000){
+                                      integraterError = -8000;
+                                    }
+                                    float I = ki*integraterError;
+                                </code>
+                            </pre>
+
+                            <p>
+                                The wind-up phenomenon happens when the integrator persistently accumulates errors, consequently extending the system's recovery duration. Despite the car's proximity to the target, the accumulated error remains unresolved, thereby exerting excessive force as the integrator continues to operate at full capacity. Setting a wind-up protection is to cap the maximum and minimum integrator error allowed to address this issue. 
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
 
 
