@@ -32,6 +32,7 @@
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB4">LAB4 Motors & OL Control</a></li>
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB5">LAB5 PID Control</a></li>
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB6">LAB6 Orientation Control</a></li>
+                    <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB7 Kalman Filter">LAB7 Kalman Filter</a></li>
 
                 </ul>
             </div>
@@ -949,7 +950,7 @@
                         <div class="flex-grow-1">
                             <h3 class="mb-0">Range/Sampling time</h3>
                             <p> 
-                                Given the task's requirement for the vehicle to initiate at a distance of 2-4 meters from the wall, ToF sensors are configured to long-range mode. While ideally, a swift sampling time is preferred, shortening it considerably compromises sensor accuracy. To maintain a balance between accuracy and sampling efficiency, the default setting is retained, albeit passed through a mean filter with a kernel size of two. This approach mitigates abrupt variations while preserving an acceptable compromise between precision and sampling frequency. The code to filter data is shown below:
+                                Given the task's requirement for the vehicle to initiate at a distance of 2-4 meters from the wall, ToF sensors are configured to long-range mode. While ideally, a swift sampling time is preferred, shortening it considerably compromises sensor accuracy. To maintain a balance between accuracy and sampling efficiency, the default setting is retained, albeit passed through a mean filter with a kernel size of two. This approach mitigates abrupt variations while preserving an acceptable compromise between precision and sampling frequency. If the control loop runs faster than the ToF data rate, we will interpolate the data. The code to filter data is shown below:
                             </p>
                             <pre>
                                 <code>
@@ -1232,7 +1233,215 @@
 
 
 
+            <hr class="m-0" />
+            <!-- LAB7 Kalman Filter-->
+            <section class="resume-section" id="LAB7 Kalman Filter">
+                <div class="resume-section-content">
+                    <h2 class="mb-5">LAB7 Kalman Filter</h2>
 
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">Introduction</h3>
+                            <p>
+                                From Lab5 PID control using ToF sensors, we observed that the robot's control loop runs faster than the data rate of the sensors, causing the PID controller to over/underestimate the error. This lab addresses this issue by using the Kalman filter. This filter uses a pre-defined model and observation to infer its unobserved state.
+                            </p>
+                        </div>
+                        <div class="flex-shrink-0"><span class="text-primary">March 2024</span></div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">Model Estimation</h3>
+                            <div class="subheading mb-3">Step Response</div>
+                            <p> 
+                                To build our model, we need to estimate the inertia of the bot and its drag. This can be measured by recording the position of the car to a step response. In other words, we teleport the car with a constant PWM value (in this case PWM = 110), and measure its position using the ToF sensor. The car's performance is shown below. 
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab7_A_B_mat_test.jpg" alt="..." />
+                            </div>
+                            <p>
+                                The blue line shows the ToF sensor data when the car starts at 4 m from the wall and drives toward it. The orange line is the velocity of the car calculated by taking the derivative of the ToF data. The velocity oscillates at first and gradually converges to the steady state. However, taking the derivative amplifies the noise in the ToF sensor, and the steady state speed is between 1.5 to 2 m/s. A better way to measure steady-state velocity is to fit the ToF data with linear regression after the 90% raise time, as shown by the green line. The slope of the line is -1.8, indicating a steady state speed of 1.8 m/s, and this speed is used for further calculation.
+                            </p>
+                            <p>
+                                Overlay the velocity graph with speed at 90% raise time, 90% rise time is roughly 2s, as shown in the figure below.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab7_90raiseTime.jpg" alt="..." />
+                            </div>
+                            <div class="subheading mb-3">Model</div>
+                            <p> 
+                                Given that d=u/v and m=-dt_0.9/ln(0.1), d is 0.556 and m is 0.483. Thus, we can obtain the A matrix, B matrix, and C matrix ([-1,0], since we are measuring negative distance from the wall) using the following equation. 
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab7_ABC_cal.jpg" alt="..." />
+                            </div>
+                            <p>
+                                The python code for calculation and discretization of A, B, and C matricies is shown below.
+                            </p>
+                            <pre>
+                                <code>
+                                    dt = (realTime[-1] - realTime[0])/(len(realTime)-1)
+                                    A = np.array([[0,1],[0,-d/m]])
+                                    B = np.array([[0],[1/m]])
+                                    Ad = np.eye(2) + dt*A
+                                    Bd = B.dot(dt)
+                                    C = np.array([[-1,0]])
+                                </code>
+                            </pre>
+                            <div class="subheading mb-3">Kalman Filter initialization</div>
+                            <p>
+                                The Kalman filter is a recursive algorithm that predicts the car's position based on the state space model and uses observation to update the predictions. The Kalman Filter depends on the initial state, state uncertainty, and process and sensor noise. The initial state contains the position at which the car starts and the initial velocity, which is zero since it is not moving at t=0. The state uncertainty can be simplified as a diagonal matrix, where the uncertainty of the initial position is assumed to be the same as the sensor uncertainty, and the velocity uncertainty is small (sig_v=1) as we are confident that the car is not moving. The initialization of Sigma is not significantly sensitive to the algorithm, and it will only affect several earlier predictions and will be corrected by observations. The process noise is determined with similar reasons as sigma where sig_1 = 20 and sig_2 = 1. The sensor noise is set to 20 (20mm )from the datasheet.
+                            </p>
+                            <pre>
+                                <code>
+                                    #initial state
+                                    x = np.array([[ToFList[0]],[0]])
+                                    #initial state uncertainty
+                                    sigma = np.array([[20^2, 0] ,[0, 1^2]])
+                                    #Model uncertainty
+                                    sigma_1 = 20
+                                    sigma_2 = 1
+                                    #sensor uncertainty
+                                    sigma_3 = 20
+                                    sig_u = np.array([[sigma_1**2,0],[0,sigma_2**2]])
+                                    #confidence in sensor measurement
+                                    sig_z = np.array([[sigma_3**2]]) 
+                                </code>
+                            </pre>
+                            <p>
+                                However, in the following test, it is determined that the uncertainty in velocity is significant and outweigh the uncertainty in the position. Therefore, sigma_1=10, sigma_2=20, sigma_3=10.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">Python implementation</h3>
+                            <p> 
+                                The Kalman Filter was first built in Python as a sanity check. The results of the filter were compared to the actual distance measurements found during Lab 5.
+                            </p>
+                            <pre>
+                                def kf(mu,sigma,u,y,update):
+                                    mu_p = Ad.dot(mu) + Bd.dot(u) 
+                                    sigma_p = Ad.dot(sigma.dot(Ad.transpose())) + sig_u
+                                    
+                                    if(update):
+                                        sigma_m = C.dot(sigma_p.dot(C.transpose())) + sig_z
+                                        kkf_gain = sigma_p.dot(C.transpose().dot(np.linalg.inv(sigma_m)))
+                                        y_m = y-C.dot(mu_p)
+                                        mu = mu_p + kkf_gain.dot(y_m)    
+                                        sigma=(np.eye(2)-kkf_gain.dot(C)).dot(sigma_p)
+                                    else:
+                                        mu = mu_p    
+                                        sigma= sigma_p
+                                        
+                                    return mu,sigma
+                            </pre>
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab7kf_python_test.jpg" alt="..." />
+                            </div>
+                            <p>
+                                If we made the model uncertainties much higher than that of the sensor, we believe the model we made is inaccurate, and the filter trusts the sensor readings the most. This is an extreme case of what we observed, in which the model built in the previous section is not accurate, and we need to trust the sensor for corrections. By increasing the uncertainty in the sensor, the Kalman Filter distrusts the sensor readings and needs lots of measurements to correct the slope of the predictions.
+                            </p>
+                            <div class="subheading mb-3">Kalman filter for orientation control</div>
+                            <p>
+                                The same parameters are used for orientation control in Lab6, the result is shown below.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab7_lab6_data.jpg" alt="..." />
+                            </div>
+
+                        </div>
+                    </div>
+
+
+
+
+
+
+
+
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">5000-level Task</h3>
+                            <p>
+                                This task encompasses two phases. The user can optionally transmit a command to set the vehicle's orientation with the specified goal, and the car will move to the designated orientation. Subsequently, the vehicle readjusts its orientation to realign with the goal following any disturbances encountered. If no goal is set by the user, the initial angle is the goal.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab6yaw_trail1.jpg" alt="..." />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">Kalman Filter on Artemis</h3>
+                            <p>
+                                The following code shows the Artemis implementation.
+                            </p>
+                            <pre>
+                                <code>
+                                    ////////// Kalman Filter var //////////
+                                    int previousDistance;
+                                    float previousTOFtime;
+                                    int n = 2;
+                                    float d = 0.5555555555555556;
+                                    float m = 0.4825494243369465;
+                                    float dtKf = 0.1;
+                                    bool updateKf = true;
+                                    BLA::Matrix<2, 2> A = { 0, 1,
+                                                            0, d/m };
+                                    BLA::Matrix<2, 1> B = { 0,
+                                                            -1/m };
+                                    BLA::Matrix<1, 2> C = { 1, 0 };
+                                    BLA::Matrix<2, 2> eye = { 1, 0,
+                                                                  0, 1 };
+                                    BLA::Matrix<2, 2> Ad = eye + A * dtKf;  //15 is an estimate of the loop time in s
+                                    BLA::Matrix<2, 1> Bd = B * dtKf;
+                                    BLA::Matrix<2, 1> X = { 0,
+                                                            0 };  //to be initialized once command is given
+                                    BLA::Matrix<2, 2> sigma = { 10, 0,
+                                                                0, 1 };  //initial uncertainty of state given from TOF data in lab 3 and set very small for speed because initial speed should be close to 0
+                                    BLA::Matrix<2, 2> sig_u = { 30, 0,
+                                                                0, 100 };  //initial uncertainty for model, to be adjusted
+                                    BLA::Matrix<1, 1> sig_z = { 30 };      //initial uncertainty of sensors, taken from lab 3
+                                    
+                                    BLA::Matrix<2, 1> kf_gain;
+                                    BLA::Matrix<1, 1> y_m;
+                                    BLA::Matrix<2, 1> mu = { 0,
+                                                            0 };
+                                    void kf(float u, BLA::Matrix<1, 1> y){
+                                      BLA::Matrix<2, 1> mu_p = Ad * mu + Bd * u;
+                                      BLA::Matrix<2, 2> sig_p = Ad * sigma * (~Ad) + sig_u;
+                                    
+                                      if (updateKf) {
+                                        y_m = y - C * mu_p; // BLA::Matrix<1, 1> y_curr = { TOF2m };
+                                        BLA::Matrix<1, 1> sig_m = C * sig_p * (~C) + sig_z;
+                                        BLA::Matrix<1, 1> sig_m_inv = sig_m;
+                                        Invert(sig_m_inv);
+                                        kf_gain = sig_p * (~C) * (sig_m_inv);
+                                        mu = mu_p + kf_gain * y_m;
+                                        sigma = (eye - kf_gain * C) * sig_p;
+                                      } else {
+                                        mu = mu_p;
+                                        sigma = sig_p;
+                                      }
+                                    }
+                                </code>
+                            </pre>
+
+                            <p>
+                                The Kalman filter predictions are used to substitute linear interpolation. The following figure shows control input with/ without Kalman Filter.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab7_test_drive_data.jpg" alt="..." />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
 
 
