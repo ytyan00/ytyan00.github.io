@@ -958,9 +958,11 @@
                                         distance1 = (distanceSensor1.getDistance()+lastDistance1)/2; //Get the result of the measurement from the sensor
                                         distanceSensor1.clearInterrupt();
                                         distanceSensor1.stopRanging();
+                                        dtInter = 0;
                                     }
                                     else{
-                                        distance1 = distance1 + (distance1-lastDistance1)/dtDistance;
+                                        dtInter = dtControl + dtInter;
+                                        distance1 = distance1 + (distance1-lastDistance1)/dtDistance*dtInter;
                                     }
                                 </code>
                             </pre>
