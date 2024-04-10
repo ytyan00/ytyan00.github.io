@@ -33,6 +33,7 @@
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB5">LAB5 PID Control</a></li>
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB6">LAB6 Orientation Control</a></li>
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB7 Kalman Filter">LAB7 Kalman Filter</a></li>
+                    <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB8 STUNTS">LAB8 STUNTS</a></li>
 
                 </ul>
             </div>
@@ -1443,6 +1444,159 @@
 
 
             <hr class="m-0" />
+            <!-- LAB8 STUNTS-->
+            <section class="resume-section" id="LAB8 STUNTS">
+                <div class="resume-section-content">
+                    <h2 class="mb-5">LAB8 STUNTSr</h2>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">Introduction</h3>
+                            <p>
+                                This laboratory exercise implements an orientation control task, combining methodologies from Lab 6 (orientation control) and Lab 7 (linear control) to control a robot's movement. Initiated at a distance from a wall, the robot is programmed to execute a 180-degree turn upon reaching a 3ft proximity to the obstacle. To achieve this objective, two sets of Proportional-Integral-Derivative (PID) control algorithms are employed: one set to guide the robot towards the wall, and another to facilitate the turn.
+                            </p>
+                        </div>
+                        <div class="flex-shrink-0"><span class="text-primary"> Apirl 2024</span></div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">PID control</h3>
+                            <div class="subheading mb-3">Step Response</div>
+                            <p> 
+                                Code for the two control algorithms is shown below. Note, orientation controller and linear controller have different integation wind-up protection.
+                            </p>
+                            <pre>
+                                <code>
+                                    float PIDControlToF(float kp, float ki, float kd, float distance){
+                                        float errorCurrent = distance - stopDistance;
+                                        dt = millis() - lastTime;
+                                        lastTime = millis();
+                                        if (distance < stopDistance+60){
+                                          controlTypeFlage = 1;
+                                        }
+                                        else{
+                                          controlTypeFlage = 0;
+                                        }
+                                        if (distance < stopDistance+80){
+                                          return 0;
+                                        }
+                                        float P = kp*errorCurrent;
+                                        integraterError += (errorCurrent*dt/10);
+                                        if (integraterError > 10000){
+                                          integraterError = 10000;
+                                        }
+                                        else if (integraterError < -10000){
+                                          integraterError = -10000;
+                                        }
+                                        float I = ki*integraterError;
+                                        Serial.println(integraterError);
+                                        if (I > 150){
+                                          I = 150;
+                                        }
+                                        else if (I < -150){
+                                          I = -150;
+                                        }
+                                        float D = kd*(errorCurrent - errorLast)/dt;
+                                        errorLast = errorCurrent;
+                                        float speed = P+I+D;
+                                        if ((speed>30)&&(speed<45)){
+                                          speed = 45;
+                                        }
+                                        return speed;
+                                    }
+                                      
+                                    float PIDControlIMU(float kp, float ki, float kd, float currentAngle){
+                                        float errorCurrent = desiredAngle - currentAngle;
+                                        dt = millis() - lastTime;
+                                        lastTime = millis();
+                                        if (abs(errorCurrent) < 40){
+                                            controlTypeFlage = 1;
+                                            return 0;
+                                        }
+                                        else{
+                                            controlTypeFlage = 0;
+                                        }
+                                        float P = kp*errorCurrent;
+                                        integraterError += (errorCurrent*dt/10);
+                                        if (integraterError > 7000){
+                                            integraterError = 7000;
+                                        }
+                                        else if (integraterError < -7000){
+                                            integraterError = -7000;
+                                        }
+                                        float I = ki*integraterError;
+                                        Serial.println(integraterError);
+                                        if (I > 70){
+                                            I = 70;
+                                        }
+                                        else if (I < -70){
+                                            I = -70;
+                                        }
+                                        float D = kd*(errorCurrent - errorLast)/dt;
+                                        errorLast = errorCurrent;
+                                        float speed = P+I+D;
+                                        Serial.print("Speed at PID");
+                                        Serial.println(speed);
+                                        return speed;
+                                    }
+                                </code>
+                            </pre>
+                            <div class="subheading mb-3">Kalman Filter or Linear interpolation</div>
+                            <p>
+                                For high-speed teleportation of the robot, it is imperative to predict its state accurately, given the relatively slow data rate of the Time-of-Flight (ToF) sensor compared to the control loop rate. Our analysis, as detailed in Lab 7, compares the effectiveness of the Kalman filter and linear interpolation for this prediction. While both methods yielded reasonable predictions, linear interpolation demonstrated a lower propensity for over- and under-prediction of states. This superiority is attributed to the Kalman filter's extended learning curve from historical data. Although parameter adjustments could potentially optimize the Kalman filter's performance, linear interpolation emerges as a simpler yet equally viable alternative. Code for interpolation is shown below.
+                            </p>
+                            <pre>
+                                <code>
+                                    if (distanceSensor1.checkForDataReady()){
+                                        ToFTimeNew = millis();
+                                        dtToF = ToFTimeNew - ToFTimeLast;
+                                        lastDistance1 = tmpRealDistance;
+                                        distance1 = distanceSensor1.getDistance();
+                                        distanceSensor1.clearInterrupt();
+                                        dtInterp = 0;
+                                        tmpRealDistance = distance1;
+                                        ToFTimeLast = millis();
+                                      }
+                                      else{
+                                        dtInterp += dtLoop;
+                                        distance1 = ((distance1 + dtInterp*(tmpRealDistance-lastDistance1)/dtToF) + distance1)/2;
+                                      }
+                                </code>
+                            </pre>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">tuning PIDs</h3>
+                            <p>
+                                Initially, I used the same PID values as in previous labs, in which PID for linear control is 0.02, 0.0002, 0.002, and PID for orientation control is 2, 0.02, 0.05. The result is demonstrated below.
+                            </p>
+                            <div style="text-align: center;">
+                                <iframe src="https://drive.google.com/file/d/1HO1ggbAt6H7VcLSyp7kGkcLPlxBNHtiT/preview" width="640" height="480" allow="autoplay"></iframe>
+                            </div>
+                            <p>
+                                From the video, the car turns more than the designated angle. There are two possible reasons. First, 180 degree is bigger than the perturbation introduced in Lab7, and the integrator might be pusshing too hard. Second, given that the car is driving in straight line, its inertia might interfere the turning. Thus, I lower the gains for the orientation control to 0.475, 0.0035, and 0.1.
+                            </p>
+                            <div style="text-align: center;">
+                                <iframe src="https://drive.google.com/file/d/1_SCTw3HLXZOFkowhR-Exo5FMw9qAFIL1/preview" width="640" height="480" allow="autoplay"></iframe>
+                            </div>
+                            <p>
+                                The ToF sensor readings during the linear contro phase is shown below.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab8ToF.jpg" alt="..." />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+
+
+
+            <hr class="m-0" />
             <!-- Interests-->
             <section class="resume-section" id="interests">
                 <div class="resume-section-content">
@@ -1452,52 +1606,7 @@
                 </div>
             </section>
             <hr class="m-0" />
-            <!-- Awards-->
-            <section class="resume-section" id="awards">
-                <div class="resume-section-content">
-                    <h2 class="mb-5">Awards & Certifications</h2>
-                    <ul class="fa-ul mb-0">
-                        <li>
-                            <span class="fa-li"><i class="fas fa-trophy text-warning"></i></span>
-                            Google Analytics Certified Developer
-                        </li>
-                        <li>
-                            <span class="fa-li"><i class="fas fa-trophy text-warning"></i></span>
-                            Mobile Web Specialist - Google Certification
-                        </li>
-                        <li>
-                            <span class="fa-li"><i class="fas fa-trophy text-warning"></i></span>
-                            1
-                            <sup>st</sup>
-                            Place - University of Colorado Boulder - Emerging Tech Competition 2009
-                        </li>
-                        <li>
-                            <span class="fa-li"><i class="fas fa-trophy text-warning"></i></span>
-                            1
-                            <sup>st</sup>
-                            Place - University of Colorado Boulder - Adobe Creative Jam 2008 (UI Design Category)
-                        </li>
-                        <li>
-                            <span class="fa-li"><i class="fas fa-trophy text-warning"></i></span>
-                            2
-                            <sup>nd</sup>
-                            Place - University of Colorado Boulder - Emerging Tech Competition 2008
-                        </li>
-                        <li>
-                            <span class="fa-li"><i class="fas fa-trophy text-warning"></i></span>
-                            1
-                            <sup>st</sup>
-                            Place - James Buchanan High School - Hackathon 2006
-                        </li>
-                        <li>
-                            <span class="fa-li"><i class="fas fa-trophy text-warning"></i></span>
-                            3
-                            <sup>rd</sup>
-                            Place - James Buchanan High School - Hackathon 2005
-                        </li>
-                    </ul>
-                </div>
-            </section>
+            
         </div>
         <!-- Bootstrap core JS-->
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
