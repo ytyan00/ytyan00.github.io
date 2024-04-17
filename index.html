@@ -34,6 +34,8 @@
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB6">LAB6 Orientation Control</a></li>
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB7 Kalman Filter">LAB7 Kalman Filter</a></li>
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB8 STUNTS">LAB8 STUNTS</a></li>
+                    <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB9 MAPPING">LAB9 MAPPING</a></li>
+
 
                 </ul>
             </div>
@@ -1592,6 +1594,156 @@
                     </div>
                 </div>
             </section>
+
+
+
+
+
+
+            <hr class="m-0" />
+            <!-- LAB9 MAPPING -->
+            <section class="resume-section" id="LAB5">
+                <div class="resume-section-content">
+                    <h2 class="mb-5">LAB9 MAPPING</h2>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">Introduction</h3>
+                            <p>
+                                The objective of this laboratory exercise is to illustrate methods for sensing and constructing representations of the environment using a robot equipped with a Time-of-Flight (ToF) sensor and an Inertial Measurement Unit (IMU). The ToF sensor provides distance measurements, while the IMU determines the angle at which these measurements are taken. The exercise implements two control strategies for the robot. Initially, drawing from Lab 8, a Proportional-Integral-Derivative (PID) control scheme is employed to facilitate the robot's rotation in 20-degree increments. The associated code for the PID control and angle updates is provided below.
+                            </p>
+                            <pre>
+                                <code>
+                                    float PIDControlIMU(float kp, float ki, float kd, float currentAngle){
+                                        float errorCurrent = desiredAngle - currentAngle;
+                                        Serial.print("controller error:");
+                                        Serial.println(errorCurrent);
+                                        dt = millis() - lastTime;
+                                        lastTime = millis();
+                                        float P = kp*errorCurrent;
+                                        integraterError += (errorCurrent*dt/10);
+                                        if (integraterError > 1000){
+                                          integraterError = 1000;
+                                        }
+                                        else if (integraterError < -1000){
+                                          integraterError = -1000;
+                                        }
+                                        float I = ki*integraterError;
+                                        //Serial.println(integraterError);
+                                        if (I > 70){
+                                          I = 70;
+                                        }
+                                        else if (I < -70){
+                                          I = -70;
+                                        }
+                                        float D = kd*(errorCurrent - errorLast)/dt;
+                                        errorLast = errorCurrent;
+                                        float speed = P+I+D;
+                                        Serial.print("PWM: ");
+                                        Serial.println(speed);
+                                        return speed;
+                                    }
+                                    /////////// PID Control //////////
+                                      
+                                    ////////// Angle update //////////
+                                    float yawGyrInit = 0;
+                                        int updateAngle;
+                                        int LastdataPoint = 0;
+                                        bool finishRecording = 0;
+                                        int angleUpdate(){
+                                        Serial.print("finishRecording: ");
+                                        Serial.println(finishRecording);
+                                        if (finishRecording){
+                                            LastdataPoint = recordIndex;
+                                            desiredAngle += 20;
+                                            finishRecording = 0;
+                                            return 3;
+                                        }
+                                        if (abs(yawGyr-desiredAngle)<5){
+                                            Serial.print("recordIndex,LastdataPoint: ");
+                                            Serial.print(recordIndex);
+                                            Serial.print(',');
+                                            Serial.println(LastdataPoint);
+                                            if (abs(recordIndex-LastdataPoint) < 20){
+                                            digitalWrite(LED_BUILTIN, HIGH);
+                                            Serial.println("sensing");
+                                            integraterError = 0;
+                                            return 0;
+                                            }
+                                            else{
+                                            finishRecording = 1;
+                                            return 1;
+                                            }
+                                        }
+                                        else{
+                                            digitalWrite(LED_BUILTIN, LOW);
+                                            Serial.println("moving");
+                                            return 2;
+                                        }
+                                    }
+                                </code>
+                            </pre>
+                            <p>
+                                The video for PID control and sensing is shown below. There are four measuring positions (5,-3), (5,3), (0,3), (-3,-2). (5,-3) and (-3,-2) are scanned using PID control, and the result is shown below.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab9PIDdata.jpg" alt="..." />
+                                <figcaption>(-3,-2) on the left, and (5,-3) on the right. Note, the posiiton is measured in feets.</figcaption>
+                            </div>
+                            <p>
+                                From the analysis of the left graph, it is evident that the car exhibits a time-dependent drift, introducing a bias in the angle measurements. Specifically, when sensing at coordinates (5, -3), one dataset (represented in blue) significantly deviates from expected values, rendering it non-contributory. Throughout this trial, despite constant PID gain values, the car exhibited both drift and slippage, potentially attributable to low battery levels or random mechanical failures. Additionally, variations in ground friction across four distinct testing locations were noted, coupled with an inherent bias in the car's gearbox. This bias facilitates turning when the wheels are positioned at half of the potential angles, whereas it poses significant challenges in overcoming friction at other angles. An attempted remedy involved increasing the controller gains; however, this adjustment led to substantial oscillation at angles where the car previously operated effectively. Given these complications, particularly the robot's unreliability and the precision required for accurate angling, using PID controllers to accomplish this task appears impractical. For the following sensing, the car is controlled using feedforward with empirically determined PWM values as shown below.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab9data2.jpg" alt="..." />
+                                <figcaption>(0,3) on the left, and (5,3) on the right. Note, the posiiton is measured in feets.</figcaption>
+                            </div>
+                        </div>
+                        <div class="flex-shrink-0"><span class="text-primary">Apirl 2024</span></div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">coordiante transformation</h3>
+                            <p> 
+                                To map the environment in global coordinates, the transformation of coordinates is needed. The first time-of-flight sensor was on the front of the robot, pointing to the positive x direction, while the second time-of-flight sensor was on the side, pointing to the y direction. Given the robot is turning in the positive z direction, the transformation matrix is as follows:
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab9_tran_mat.jpg" alt="..." />
+                            </div>
+                            <p>
+                                The code for the transfermation is as follows:
+                            </p>
+                            <pre>
+                                <code>
+                                    transformed_data = pd.DataFrame({
+                                        'X': sensor_position[0] + data['distance']*0.00328084 * np.cos(data['Theta_Radians']),
+                                        'Y': sensor_position[1] + data['distance']*0.00328084 * np.sin(data['Theta_Radians']),
+                                        'Z': np.zeros_like(data['distance'])  # Z-coordinate remains zero
+                                    })
+                                </code>
+                            </pre>
+                            <p>
+                                The resulted map is shown below, where the blue dots are the posiiton of the robot when sensing.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab9_map.jpg" alt="..." />
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+
+
+
+
+
+
+
+
+
+
 
 
 
