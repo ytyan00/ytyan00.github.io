@@ -35,7 +35,7 @@
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB7 Kalman Filter">LAB7 Kalman Filter</a></li>
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB8 STUNTS">LAB8 STUNTS</a></li>
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB9 MAPPING">LAB9 MAPPING</a></li>
-
+                    <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB10 LOCALIZATION">LAB10 LOCALIZATION</a></li>
 
                 </ul>
             </div>
@@ -1602,7 +1602,7 @@
 
             <hr class="m-0" />
             <!-- LAB9 MAPPING -->
-            <section class="resume-section" id="LAB5">
+            <section class="resume-section" id="LAB9 MAPPING">
                 <div class="resume-section-content">
                     <h2 class="mb-5">LAB9 MAPPING</h2>
 
@@ -1735,6 +1735,146 @@
             </section>
 
 
+            <hr class="m-0" />
+            <!-- LAB10 MAPPING -->
+            <section class="resume-section" id="LAB10 LOCALIZATION">
+                <div class="resume-section-content">
+                    <h2 class="mb-5">LAB10 LOCALIZATION</h2>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">Introduction</h3>
+                            <p>
+                                The lab implements grid localization using Bayes filter. The robot's state is discretized to a 3D grid world that can be represented by location and orientation (x,y,theta).
+                            </p>
+                        </div>
+                        <div class="flex-shrink-0"><span class="text-primary">Apirl 2024</span></div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">Implementation</h3>
+                            <div class="subheading mb-3">compute_control</div>
+                            <p> 
+                                This function governs the robot's movement through a three-step process. Initially, it aligns the robot to face the trajectory's direction. Subsequently, it executes the translation movement. Finally, the function reorients the robot to achieve the specified orientation.
+                            </p>
+                            <pre>
+                                <code>
+                                    def compute_control(cur_pose:np.ndarray, prev_pose:np.ndarray)->tuple[float,float,float]:
+                                        """ Given the current and previous odometry poses, this function extracts
+                                        the control information based on the odometry motion model.
+                                        Args:
+                                            cur_pose  ([Pose]): Current Pose
+                                            prev_pose ([Pose]): Previous Pose 
+
+                                        Returns:
+                                            [delta_rot_1]: Rotation 1  (degrees)
+                                            [delta_trans]: Translation (meters)
+                                            [delta_rot_2]: Rotation 2  (degrees)
+                                        """
+                                        y = cur_pose[1]-prev_pose[1]
+                                        x = cur_pose[0]-prev_pose[0]
+                                        delta_trans = (x**2+y**2)**(1/2)
+                                        delta_rot_1 = mapper.normalize_angle(np.rad2deg(math.atan2(y,x)))
+                                        delta_rot_2 = mapper.normalize_angle(cur_pose[2]-delta_rot_1)
+                                        return delta_rot_1, delta_trans, delta_rot_2
+                                </code>
+                            </pre>
+                            <div class="subheading mb-3">prediction_step</div>
+                            <p>
+                                The function employs the prior and the transition model to predict the state of the robot. It updates the probability of each cell within the robot's grid world by summing the probabilities of transitioning to each grid from all other grids. Below is the mathematical description along with its Python implementation.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab10_predict.jpg" alt="..." />
+                            </div>
+                            <pre>
+                                <code>
+                                def prediction_step(cur_odom:np.ndarray, prev_odom:np.ndarray):
+                                    """ Prediction step of the Bayes Filter.
+                                    Update the probabilities in loc.bel_bar based on loc.bel from the previous time step and the odometry motion model.
+                                
+                                    Args:
+                                        cur_odom  ([Pose]): Current Pose
+                                        prev_odom ([Pose]): Previous Pose
+                                    """
+                                    u = compute_control(cur_odom,prev_odom)
+                                    for prev_x in range(mapper.MAX_CELLS_X):
+                                        for prev_y in range(mapper.MAX_CELLS_Y):
+                                            for prev_theta in range(mapper.MAX_CELLS_A):
+                                                if (loc.bel[prev_x][prev_y][prev_theta]>0.0001):
+                                                    for cur_x in range(mapper.MAX_CELLS_X):                                      
+                                                        for cur_y in range(mapper.MAX_CELLS_Y):                                   
+                                                            for cur_theta in range(mapper.MAX_CELLS_A):                           
+                                                                curr_pose = mapper.from_map(cur_x,cur_y,cur_theta)               
+                                                                prev_pose = mapper.from_map(prev_x,prev_y,prev_theta)
+                                                                #use the given grid pose make prediction for each grid
+                                                                prob = odom_motion_model(curr_pose,prev_pose, u)
+                                                                belief = loc.bel[prev_x][prev_y][prev_theta]
+                                                                loc.bel_bar[cur_x][cur_y][cur_theta] += prob*belief
+                                    loc.bel_bar = loc.bel_bar/np.sum(loc.bel_bar)
+                                </code>
+                            </pre>
+                            <div class="subheading mb-3">sensor_model</div>
+                            <p>
+                                This function implement the sensor reading assuming the sensor noise has a gaussian distribution.
+                            </p>
+                            <pre>
+                                <code>
+                                    def sensor_model(obs):
+                                        """ This is the equivalent of p(z|x).
+
+
+                                        Args:
+                                            obs ([ndarray]): A 1D array consisting of the true observations for a specific robot pose in the map 
+
+                                        Returns:
+                                            [ndarray]: Returns a 1D array of size 18 (=loc.OBS_PER_CELL) with the likelihoods of each individual sensor measurement
+                                        """
+                                        data_len = mapper.OBS_PER_CELL
+                                        prob_array = np.zeros(data_len)   
+                                        for i in range(data_len):
+                                            prob_array[i] = loc.gaussian(loc.obs_range_data[i], obs[i], loc.sensor_sigma)
+                                        return prob_array
+                                </code>
+                            </pre>
+                            
+                            <div class="subheading mb-3">update_step</div>
+                            <p>
+                                As the last step, we update our belief based on our prediction and observation using the following equation.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab10_update.jpg" alt="..." />
+                            </div>
+                            <pre>
+                                <code>
+                                    def update_step():
+                                        """ Update step of the Bayes Filter.
+                                        Update the probabilities in loc.bel based on loc.bel_bar and the sensor model.
+                                        """
+                                        for x in range(mapper.MAX_CELLS_X):                                      
+                                            for y in range(mapper.MAX_CELLS_Y):
+                                                for a in range(mapper.MAX_CELLS_A):
+                                                    loc.bel[x][y][a] = np.prod(sensor_model(mapper.get_views(x,y,a)))*loc.bel_bar[x][y][a]											
+                                        loc.bel = loc.bel / np.sum(loc.bel)
+                                </code>
+                            </pre>                            
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">result</h3>
+                            <p>
+                                The robot runs on a predefined trajectory. We use Bayes filter to predict the states (trajectory) of it. The ground truth is in green, odometry data in red, and prediction in blue. Though the prediction ‘follows’ the ground truth, it does not perfectly match with truth. I believe this observation indicate successful implementation of the bayes filter, but, probably, due to the noise in the robot and sensor, the deviation occurs.
+                            </p>
+                            <div style="text-align: center;">
+                                <iframe src="https://drive.google.com/file/d/1f3ya1Ux1JV2ijnDJ6ZdjYGIJ_NGAK6SM/preview" width="640" height="480" allow="autoplay"></iframe>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
 
 
 
