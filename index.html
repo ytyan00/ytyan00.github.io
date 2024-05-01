@@ -36,6 +36,8 @@
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB8 STUNTS">LAB8 STUNTS</a></li>
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB9 MAPPING">LAB9 MAPPING</a></li>
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB10 LOCALIZATION">LAB10 LOCALIZATION</a></li>
+                    <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB11 LOCALIZATION (Real)">LAB10 LOCALIZATION (Real)</a></li>
+
 
                 </ul>
             </div>
@@ -1880,6 +1882,99 @@
 
 
 
+
+
+            <hr class="m-0" />
+            <!-- LAB11 LOCALIZATION (Real) -->
+            <section class="resume-section" id="LAB11 LOCALIZATION (Real)">
+                <div class="resume-section-content">
+                    <h2 class="mb-5">LAB11 LOCALIZATION (Real)</h2>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">Introduction</h3>
+                            <p>
+                                This laboratory exercise demonstrates the implementation of the Bayes filter for localization (x,y) using a robot equipped with a Time-of-Flight (ToF) sensor. The robot initiates its position along designated points parallel to the x-axis and performs an environmental scan by rotating in 20-degree increments to facilitate accurate localization.
+                            </p>
+                        </div>
+                        <div class="flex-shrink-0"><span class="text-primary">Apirl 2024</span></div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">Implementation</h3>
+                            <div class="subheading mb-3">Localization in Simulation</div>
+                            <p>
+                                The figure below illustrates the navigation and localization outcomes within the simulator. The trajectories are represented by red, green, and blue lines, corresponding to the odometry, ground truth, and belief, respectively. The alignment of the belief trajectory with the ground truth suggests effective functioning of the Bayes filter.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab11_sim.jpg" alt="..." />
+                            </div>
+                            <div class="subheading mb-3">Localization in Real World</div>
+                            <p>
+                                We aimed to localize the robot at four distinct marked poses without translational movement between landmarks. This stationary context allowed for the initialization of the belief with a uniform prior, facilitating the identification of the robot's position at each marked pose. The following program teleport the robot to turn 360 degrees in place while collecting ToF sensor readings every 20 degrees. We implemented a proportional orientation controller as we demonstrated in previous lab that PID works not as well as P along.
+                            </p>
+                            <pre>
+                                <code>
+                                    def perform_observation_loop(self, rot_vel=120):
+                                        obs_length = 18
+                                        sensor_ranges=np.zeros([obs_length,1])
+                                        sensor_bearings=np.zeros([obs_length,1])
+                                        robot_orientation_goal = 0
+                                        #interval=360/observations_count # 20
+                                        for i in range(obs_length):
+                                            sensor_bearings[i]=robot_orientation_goal
+                                            start = "1|"
+                                            pid = "10.5|0|0|"
+                                            command = start+pid+str(robot_orientation_goal)
+                                            print(command)
+                                            ble.send_command(CMD.MOVE2GOAL,command)
+                                            asyncio.run(asyncio.sleep(3))
+                                            #time.sleep(1)
+                                            ble.send_command(CMD.GET_DISTANCE, "")
+                                
+                                            # time.sleep(1)
+                                            temp=float(ble.receive_string(ble.uuid['RX_STRING']))*0.001
+                                            sensor_ranges[i]=temp#+0.075
+                                            asyncio.run(asyncio.sleep(2))
+                                            print("Angle: ",robot_orientation_goal,'distance: ',temp)
+                                            robot_orientation_goal+=20
+                                        # SETPOINT=SETPOINT-interval; # CCW
+                                        ble.send_command(CMD.STOP2Move, "")
+                                        return sensor_ranges,sensor_bearings
+                                </code>
+                            </pre>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">result</h3>
+                            <div class="subheading mb-3">Demo</div>
+                            <div style="text-align: center;">
+                                <iframe src="https://drive.google.com/file/d/1A2hLW3ImlFRVzwRzyV8XJch3AmmrWG7b/preview" width="640" height="480" allow="autoplay"></iframe>
+                            </div>
+                            <div class="subheading mb-3">Result Analysis</div>
+                            <p>
+                                The four landmarks were defined as follows: (1) (-3 ft, -2 ft), (2) (0 ft, 3 ft), (3) (5 ft, -3 ft), and (4) (5 ft, 3 ft). The robot was positioned at these marked poses, and the update step of the Bayes filter was executed. The results are illustrated with green dots representing the ground truth and blue dots indicating the belief.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab11_data.bmp" alt="..." />
+                            </div>
+                            <div class="subheading mb-3">Discussion</div>
+                            <p>
+                                The table below details the localization errors observed at four landmarks. At the first landmark, the x-coordinate is accurately determined, but there is a slight discrepancy in the y-coordinate, potentially due to an error in the orientation belief. Despite this, the robot maintains a generally accurate estimate of its location. In the second scenario, the orientation error is significant at 150 degrees, nearly mirroring the actual map in the robot's perception. This error causes the Time-of-Flight (ToF) sensor readings to suggest an incorrect orientation, as observations made facing the positive x-direction could mistakenly appear to originate from the negative x-direction. Correcting the orientation is crucial for resolving this localization issue. The third case exhibits a similar pattern with a 130-degree orientation error, mirroring the actual position in the robot's belief. The fourth case has a minor 10-degree error in orientation due to the use of grid localization with 20-degree grid cells along the theta axis. This discretization leads to inevitable errors, slightly affecting the localization accuracy. Increasing the grid resolution could enhance performance.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab11_error.jpg" alt="..." />
+                            </div>
+
+
+                        </div>
+                    </div>
+
+                </div>
+            </section>
 
 
 
