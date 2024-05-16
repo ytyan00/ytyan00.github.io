@@ -36,8 +36,8 @@
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB8 STUNTS">LAB8 STUNTS</a></li>
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB9 MAPPING">LAB9 MAPPING</a></li>
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB10 LOCALIZATION">LAB10 LOCALIZATION</a></li>
-                    <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB11 LOCALIZATION (Real)">LAB10 LOCALIZATION (Real)</a></li>
-
+                    <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB11 LOCALIZATION (Real)">LAB11 LOCALIZATION (Real)</a></li>
+                    <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#LAB11 LOCALIZATION (Real)">LAB12 Planning (Real)</a></li>
 
                 </ul>
             </div>
@@ -1978,7 +1978,159 @@
 
 
 
+            <hr class="m-0" />
+            <!-- LAB12 LOCALIZATION (Real) -->
+            <section class="resume-section" id="LAB11 LOCALIZATION (Real)">
+                <div class="resume-section-content">
+                    <h2 class="mb-5">LAB12 Planning</h2>
 
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">Introduction</h3>
+                            <p>
+                                This lab aimed to navigate the robot in a given maze using localization methods implemented in Lab 11.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab12_map.jpg" alt="..." />
+                            </div>
+                        </div>
+                        <div class="flex-shrink-0"><span class="text-primary">May 2024</span></div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">Implementation</h3>
+                            <div class="subheading mb-3">Localization</div>
+                            <p>
+                                From Lab11, we used the Bayes Filter to infer the position and orientation of the car. However, we demonstrated that the orientation using Bayesian Inference is not fully functional. Therefore, we hard-coded the orientation control in the following implementation, and we will be inferencing (x,y) only. We assume the landmarks and visiting sequences in the maze are known in our knowledge base. This is human planning rather than robot planning but given the limited time for this lab, robot planning methods like Integrated Task and Motion Planning (TAMP) are hard to implement. Therefore, we plan our trajectory by calculating the relative angle and distance between the current (inferred) landmark and the next landmark. Relative code is shown below.
+                            </p>
+                            <pre>
+                                <code>
+                                    def compute_control(cur_pose:tuple, prev_pose:tuple)->tuple[float,float]:
+                                        y = cur_pose[1]-prev_pose[1]
+                                        x = cur_pose[0]-prev_pose[0]
+                                        delta_trans = (x**2+y**2)**(1/2)
+                                        delta_rot_1 = np.rad2deg(math.atan2(y,x))
+                                        return delta_rot_1, delta_trans
+                                    for landmark_num in range(1,len(landmarks)-1):
+                                        # start by localization
+                                        loc.init_grid_beliefs()# Init Uniform Belief
+                                        # Get Observation Data by executing a 360 degree rotation motion
+                                        loc.get_observation_data()
+                                        # Run Update Step
+                                        loc.update_step()
+                                        loc.plot_update_step_data(plot_data=True)
+                                        argmax_bel = utils.get_max(loc.bel)
+                                        current_bel = loc.mapper.from_map(*argmax_bel[0])
+                                        # find [orientation,dirve_distance]
+                                        delta_rot_1,delta_trans = compute_control(landmarks[landmark_num],current_bel)
+                                </code>
+                            </pre>
+                            <p>
+                                The results are shown below.
+                            </p>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab12_plan.jpg" alt="..." />
+                            </div>
+                            <div class="subheading mb-3">Motion Control</div>
+                            <p>
+                                The initial idea is to use PID controllers for orientation control and translation control as implemented in previous labs. The code is shown below. First, turn the robot face to the next next landmark. Then, move the robot to the next point by translation. Last, re-orient the robot to its initial orientation. Therefore, we do not need to consider its orientation at each landmark during localization control and the actual path following control.
+                            </p>
+                            <pre>
+                                <code>
+                                    void driveCar_linear(float data){
+                                        float pwm = PIDControlToF(kp_linear,ki_linear,kd_linear,data);
+                                        pwm = pwmCap(pwm);
+                                        analogWrite(11, 0);
+                                        analogWrite(12, int(pwm)); //right
+                                        analogWrite(7, int(pwm*1.15+15)); //left
+                                        analogWrite(9, 0);
+                                        Serial.print("[Drive_car_linear] Linear Motion, Distance_Error: ");
+                                        Serial.print(errorCurrent_linear);
+                                        Serial.print(" |Dt: ");
+                                        Serial.print(dt);
+                                        Serial.print(" |Velocity: ");
+                                        Serial.println(int(pwm));
+                                        if (abs(errorCurrent_linear)<=100){
+                                          status_linear = 0;
+                                          status_reorientation = 1;
+                                          status_orientation =  0;
+                                        }
+                                        else{
+                                          status_linear = 1;
+                                          status_reorientation = 0;
+                                          status_orientation =  0;
+                                        }
+                                      }
+                                      
+                                      void driveCar_angular_orientation(float data, float loopTime){
+                                        float pwm = PIDControlIMU(kpIMU,kiIMU,kdIMU,data);
+                                        pwm = pwmCap(pwm);
+                                        if (pwm > 0){
+                                          analogWrite(11, 0); // right backward
+                                          analogWrite(12, int(pwm)); //right forward -int(v)
+                                          analogWrite(7, 0); //left forward int(v*1.1+20)
+                                          analogWrite(9, int(1.075*pwm));
+                                        }
+                                        else if(pwm < 0){
+                                          analogWrite(11, abs(int(pwm))); // right backward
+                                          analogWrite(12, 0); //right forward -int(v)
+                                          analogWrite(7, abs(int(pwm*1.075))); //left forward int(v*1.1+20)
+                                          analogWrite(9, 0);
+                                        }
+                                        else{
+                                          analogWrite(11, 0); // right backward
+                                          analogWrite(12, 0); //right forward -int(v)
+                                          analogWrite(7, 0); //left forward int(v*1.1+20)
+                                          analogWrite(9, 0);    
+                                        }
+                                        if (abs(data-desiredAngle)<=5){
+                                          status_orientation = 0;
+                                          status_linear = 1;
+                                          status_reorientation = 0;
+                                        }
+                                        else{
+                                          status_orientation = 1;
+                                          status_linear = 0;
+                                          status_reorientation = 0;
+                                        }
+                                      }
+                                </code>
+                            </pre>
+                            <p>
+                                Before running in the actual maze, the algorithm has been tested by telling the robot that the next landmark is at its 45 degrees and is 300 mm away. From the video below, we see that the robot can move as desired on the ground. However, the translation algorithm does not work in the actually maze, and the car would either be stationary or move fast and crash into the wall. This might be that the walls in the maze do not have strong reference point for the ToF sensor to measure.
+                            </p>
+                            <div style="text-align: center;">
+                                <iframe src="https://drive.google.com/file/d/1q1hC4c3uFyHTtV2QYdkvO0NuwwC1Sy9v/preview" width="640" height="480" allow="autoplay"></iframe>
+                            </div>
+                            <div style="text-align: center;">
+                                <img class="img-fluid" src="assets/img/lab12_ToFData.jpg" alt="..." />
+                            </div>
+                            <p>
+                                The above image shows ToF sensor data when moving the robot in the maze. To collect the data, I am moving the car towards the wall constantly by hand while recoding the ToF readings. The readings decreases as expected initially. However, after some time passes, the readings increases suddenly though the car is moving close to the wall. Thus, I believe there is a failure in my ToF sensor (either when it is in the maze or because of the long range mode). Given the fact the ToF sensors do not work in the maze, we can only use feedforward algorithms to teleport the robot.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">result</h3>
+                            <div class="subheading mb-3">Feedforward Demo</div>
+                            <p>
+                                The following is a demo of driving the robot in the maze.
+                            </p>
+                            <div style="text-align: center;">
+                                <iframe src="https://drive.google.com/file/d/1JBqRsAw_OxKOU4Ez92M5Il0NGrxGreiS/preview" width="640" height="480" allow="autoplay"></iframe>
+                            </div>
+                            <div class="subheading mb-3">Discussion</div>
+                            <p>
+                                Though I established a path planning pipeline for the robot, due to the failure of the ToF sensor, I am not able to test it in the maze. However, both localization algorithm and path following algorithms work on the lab's ground. To avoid such sensor failure and potential motor failure that has happened to other students, I suggest we should have better robot. Given this cheap robot, we observed that feedforward works much better than feedback control, making what we learned and implemented less meaningful as they should be.
+                            </p>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
 
 
 
